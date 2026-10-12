@@ -4,18 +4,27 @@ Material from outside this project, written up for offline reading.
 
 ## The rule for this folder
 
-This repository is **public on GitHub**. So nothing here is a copy-paste of someone else's document.
+This repository is **public on GitHub**, so everything here credits where it came from.
 
-When you find a good article, I write a note that:
+When you find a good article, the note written from it:
 
-1. covers the same **ideas** (ideas are not owned by anyone)
-2. is written in our own words, in the simple English of these notes
-3. maps every idea onto **our code**, so it is concrete instead of abstract
-4. links to the original and credits it
+1. covers the same **ideas**, in our own words and in the simple English of these notes
+2. maps every idea onto **our code**, so it is concrete instead of abstract
+3. names and links the original at the top
 
-That keeps the learning and avoids republishing someone else's writing without permission.
+### About the diagrams
 
-If you ever want a literal copy of an article for yourself, save it under `notes/reference/private/`. That folder is in `.gitignore`, so it stays on your laptop and never reaches GitHub. Reading a copy yourself is fine. Publishing it is a different thing.
+`images/` holds the hand-drawn summary cards from the source document. They are reproduced with credit because they teach the material better than a rewrite would, and the source is a freely readable public link.
+
+If the author of that document ever asks for them to be removed, remove them — the surrounding notes stand on their own without them.
+
+For anything you are not comfortable publishing, use `notes/reference/private/`. That folder is in `.gitignore`, so it stays on your laptop and never reaches GitHub.
+
+To make this whole repository private instead:
+
+```powershell
+gh repo edit VarunNayak89/runbook-copilot --visibility private
+```
 
 ## What is here
 

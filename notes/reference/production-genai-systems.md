@@ -3,9 +3,9 @@
 **Source:** ["Production GenAI Systems" — Google Doc](https://docs.google.com/document/d/12FBU-Ss2Ugo9YCyKXREy9_x5Pudxi8rE4FpuZ91R6Jk/mobilebasic) (no author stated).
 This note covers the same ideas in our own words and maps each one onto our code. See [the folder rule](README.md) for why it is not a copy.
 
-> **Diagrams.** The flowcharts below are written in Mermaid. They render automatically on GitHub.
-> In VS Code they need the free extension **"Markdown Preview Mermaid Support"** — until you install it you will see the code instead of the picture.
-> The original hand-drawn versions are saved on your machine at `notes/reference/private/genai-diagrams/`, which is gitignored and never uploaded.
+> **Diagrams.** The hand-drawn summary cards at the start of each section are from the source document linked above, reproduced here with credit to that source. Each one is a complete one-page summary of its topic — read the picture first, then the detail below it.
+>
+> Sections 8 and 9 have no card in the original, so those two flows are drawn in Mermaid. They render on GitHub; in VS Code they need the free extension **"Markdown Preview Mermaid Support"**.
 
 ---
 
@@ -31,32 +31,11 @@ Most people stop at the demo. The seven parts below are what the next six months
 
 You know this one. [Note 3](../03-rag.md) and [simple words, Part 3](../ai-in-simple-words.md) cover it.
 
+![RAG: ingestion and query pipelines, key points and common failures](images/01-rag.png)
+
 **Goal: give the model the right knowledge at the moment it answers.**
 
-There are two pipelines, and it helps a lot to see them as separate things. One runs rarely. One runs on every question.
-
-```mermaid
-flowchart TB
-    subgraph ING["INGESTION — runs once, or when a document changes"]
-        direction TB
-        D[Documents] --> P[Parsing]
-        P --> C[Chunking]
-        C --> E["Embeddings<br/>[0.1, 0.4, ...]"]
-        E --> V[(Vector database)]
-    end
-
-    subgraph QRY["QUERY TIME — runs on every question"]
-        direction TB
-        Q[User query] --> QE["Query embedding<br/>[0.2, 0.1, ...]"]
-        QE --> R["Retrieval (top K)"]
-        R --> RR[Reranking]
-        RR --> CTX[Relevant context]
-        CTX --> L[LLM]
-        L --> A[Answer]
-    end
-
-    V -. searched by .-> R
-```
+Note the two pipelines in the diagram above, and that they are separate things. The left one runs rarely — only when a document changes. The right one runs on every single question.
 
 **Key points**
 
@@ -109,6 +88,8 @@ Compare that with everything we have done: we never changed any weights. We only
 
 ### RAG or fine-tuning?
 
+![Fine-tuning: when to use it, RAG vs fine-tuning table, LoRA/PEFT, common mistake](images/02-fine-tuning.png)
+
 **Goal: teach the model how to behave — not what to know.**
 
 Use it for: a consistent output format, a specific style or tone, classification and extraction, or domain-specific behaviour.
@@ -140,6 +121,8 @@ You pay to train, and the day a runbook is edited your model is wrong again, wit
 ---
 
 # Part 3 — Evals: how you test something that is not deterministic
+
+![Evals: core concepts, types of graders, capability vs regression, non-determinism](images/03-evals.png)
 
 The deepest topic here, and the one that separates engineers from demo-builders.
 
@@ -181,16 +164,10 @@ They are not rivals. Use code graders where you can, model graders where you mus
 
 Two different jobs, and you need both:
 
-```mermaid
-flowchart LR
-    CAP["<b>Capability evals</b><br/>What can the system do?<br/>Use hard tasks.<br/><i>Goal: improve</i>"]
-    REG["<b>Regression evals</b><br/>Did something break?<br/>Should have a high pass rate.<br/><i>Goal: protect</i>"]
-    CAP -->|you improve the system| REG
-    REG -->|the new ability is now protected| CAP
-```
-
 - **Capability** — "what can it do?" Use **hard** tasks, where there is room to improve. A low score here is useful information.
 - **Regression** — "did I break something that worked?" These should pass at a very high rate. A failure here is an alarm.
+
+You improve the system against capability evals; regression evals then protect what you gained.
 
 Our 8 questions are a **regression** suite. They all pass, and if a change breaks one, the build fails. We have no capability suite — no deliberately hard questions. That is a gap you can name.
 
@@ -260,19 +237,11 @@ This is why `eval` returns **exit code 2** when the score is not perfect, and wh
 
 **Evals** tell you *whether* it worked. **Observability** tells you *why*.
 
+![Observability: the request trace, what to observe, and why it matters](images/04-observability.png)
+
 **Goal: make the system debuggable instead of mysterious.**
 
-Trace one request through every stage, and record something at each step:
-
-```mermaid
-flowchart LR
-    REQ[Request] --> QP[Query<br/>processing]
-    QP --> EMB[Embedding]
-    EMB --> RET[Retrieval]
-    RET --> RR[Reranking]
-    RR --> LLM[LLM]
-    LLM --> RES[Response]
-```
+Trace one request through every stage, and record something at each step.
 
 ### What to measure
 
@@ -312,16 +281,11 @@ Log the question id, the file names retrieved, token counts and latency. Log the
 
 # Part 5 — Caching: faster and cheaper
 
+![Caching: the four layers, five types, and the invalidation problem](images/05-caching.png)
+
 **Goal: avoid repeating expensive work.** Model calls cost money and time.
 
-You can cache at four points along the pipeline, and each one saves a different cost:
-
-```mermaid
-flowchart LR
-    E["<b>Embedding</b><br/>cache"] --> R["<b>Retrieval</b><br/>cache"]
-    R --> L["<b>LLM response</b><br/>cache"]
-    L --> A["<b>API / tool result</b><br/>cache"]
-```
+You can cache at four points along the pipeline — embedding, retrieval, LLM response, and external API result — and each one saves a different cost.
 
 ### Five layers
 
@@ -353,6 +317,8 @@ A stale cache serves last month's policy as today's answer. Worse, a cache scope
 
 # Part 6 — Feedback loops: learning from real users
 
+![User feedback loops: signals, why feedback is not ground truth, and the loop](images/06-feedback-loops.png)
+
 Your eval suite only contains failures you already imagined. Users find the others.
 
 **Signals you can collect:** thumbs up / down, corrections the user types, retries, escalation to a human, abandoned workflows.
@@ -371,15 +337,7 @@ Five different problems, five different fixes, one identical signal. Treat feedb
 
 ### The loop
 
-```mermaid
-flowchart LR
-    F[User feedback] --> I[Investigate]
-    I --> RC[Find root cause]
-    RC --> FIX[Fix]
-    FIX --> PR[Prevent regression]
-    PR --> NE[<b>Create new eval</b>]
-    NE --> F
-```
+`User feedback` → `investigate` → `find root cause` → `fix` → `prevent regression` → **`create new eval`** → and back to the start.
 
 The step everyone skips is **create new eval**.
 
@@ -393,17 +351,13 @@ Production feedback is especially good at finding problems you never would have 
 
 # Part 7 — Guardrails: keeping the system inside the lines
 
+![Guardrails: input and output layers, business rules, and human approval](images/07-guardrails.png)
+
 **Goal: control what the system is allowed to do. Protect users, data and the business.**
 
 A guard on the way in, and a guard on the way out:
 
-```mermaid
-flowchart LR
-    U[User] --> IG["🛡 INPUT<br/>guardrails"]
-    IG --> L[LLM]
-    L --> OG["🛡 OUTPUT<br/>guardrails"]
-    OG --> APP[Application]
-```
+`User` → **input guardrails** → `LLM` → **output guardrails** → `Application`
 
 ### Input guardrails
 
@@ -430,13 +384,9 @@ This is the most important idea in Part 7, and it is the answer to what you foun
 
 > **The model proposes. Deterministic code decides.**
 
-```mermaid
-flowchart LR
-    P["LLM <b>proposes</b> an action<br/>e.g. refund ₹50,000"] --> C{"Policy / risk check<br/><i>automated cap: ₹10,000</i>"}
-    C -->|within policy| X[Execute action]
-    C -->|over the cap| H[<b>Human approval</b>]
-    H --> X
-```
+See the bottom of the diagram above:
+
+`LLM proposes an action (refund ₹50,000)` → `policy / risk check` → `human approval` → `execute action`
 
 The ₹10,000 cap is **not in the prompt**. It is in code, where it cannot be argued with, talked around, or forgotten on a retry.
 
