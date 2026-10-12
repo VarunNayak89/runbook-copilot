@@ -6,3 +6,6 @@ appsettings.Local.json
 .venv/
 __pycache__/
 *.pyc
+
+# Personal copies of outside articles. Yours to read, not ours to publish.
+notes/reference/private/

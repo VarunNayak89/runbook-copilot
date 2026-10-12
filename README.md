@@ -1,81 +1,70 @@
-# AI learning
+# Learning how LLM applications actually work
 
-**New here, or not sure what to do next? → [START-HERE.md](START-HERE.md).** Seven sessions, in order, one command each. This README is the reference; that file is the path.
+A study project for a software developer who is new to AI.
 
-This folder is a personal study space, kept separate from any work repository on purpose. The company in the sample app, Northwind Cloud, is fictional, so this can be shown publicly. Never copy real runbooks, tenant names, pipeline values, or keys from work into it.
+It answers four questions that appear in every job posting — **what is RAG, what is an LLM application, what is an agent, what is LangChain** — by building the thing, running it, and measuring it.
 
-## What you are building toward
+---
 
-Job posts ask for RAG, LangChain, LLM applications, and agents. Those are one pipeline with different library names:
+## → Start at [START-HERE.md](START-HERE.md)
 
-1. Call a language model.
-2. Put the right private text into the prompt (RAG).
-3. Make the model return JSON your code can validate.
-4. Let the model call tools in a loop (an agent).
+That file is the only one you need to open. It tells you what to read and what to run, day by day, and links to everything else at the right moment.
 
-## The two projects
+If you want to see what is in the folder first: [PROJECT-MAP.md](PROJECT-MAP.md)
 
-| Project | What it is |
-| --- | --- |
-| [Runbook Copilot](projects/RunbookCopilot/README.md) | A .NET 8 console app: retrieval, eval, grounded prompts, structured output, and a tool-calling loop. The same shape as the tools you already write — options, files, HTTP, and tests. |
-| [LangChain port](projects/langchain-port/README.md) | The `ask` path rebuilt in Python with the real LangChain library. Same corpus, same constants, same 8/8. It exists so "I have used LangChain" is a true sentence and you can say what the library did and did not decide. |
+---
 
-A local model is installed (Ollama, `llama3.2`). Both projects read the same `COPILOT_*` environment variables, so one block configures both:
+## What is here
 
-```powershell
-$env:COPILOT_PROVIDER = "OpenAICompatible"
-$env:COPILOT_ENDPOINT = "http://localhost:11434/v1"
-$env:COPILOT_CHAT_MODEL = "llama3.2"
-```
+**[projects/RunbookCopilot](projects/RunbookCopilot/README.md)** — a .NET 8 console app that answers questions about a fictional operations guide.
 
-Leave them unset and both projects print the retrieved passages and stop, which is the honest offline mode.
+- Chunks markdown by heading, with overlap so a fact on a boundary is not lost
+- Hybrid retrieval: BM25 for exact words, embeddings for meaning, combined with reciprocal rank fusion
+- `recall@3` eval over a fixed question set, which also runs as a unit test
+- Grounded prompts that must cite a file and are allowed to say "I do not know"
+- Structured output into validated JSON with an allowlist
+- A read-only tool-calling agent loop with a step limit and a path check
+- A `trace` command that prints the HTTP request body **instead of sending it**
 
-## Read in this order
+**[projects/langchain-port](projects/langchain-port/README.md)** — the same retrieval path rebuilt in Python with LangChain. Same documents, same score. It exists to show that the library is plumbing, not magic.
 
-| Order | Note | You can explain |
-| --- | --- | --- |
-| 1 | [How to study](notes/00-how-to-study.md) | What you are allowed to say in an interview, and what you are not |
-| 2 | [How an LLM works](notes/01-how-llms-work.md) | Tokens, context, temperature, why the model invents facts |
-| 3 | [Prompts and JSON](notes/02-prompts-and-structured-output.md) | System message, grounding, and why a validator sits behind the model |
-| 4 | [RAG](notes/03-rag.md) | Chunk, embed, search, cite, and how recall@3 is different from a good answer |
-| 5 | [Agents](notes/04-agents.md) | Tool calls, the loop, and when a fixed pipeline is the better product |
-| 6 | [Library names](notes/05-libraries.md) | How LangChain and Semantic Kernel map onto this C# app |
-| 7 | [Production](notes/06-production.md) | Keys, injection, cost, and actions that must stay human |
-| 8 | [Interview](notes/07-interview.md) | A two-minute story tied to files you can open |
-| 9 | [The request body](notes/08-the-request-body.md) | All four words — RAG, LLM app, agent, LangChain — read off one printed HTTP request |
+**[notes/](PROJECT-MAP.md)** — the explanations, from [easy English](notes/ai-in-simple-words.md) up to [what a production system needs](notes/reference/production-genai-systems.md).
 
-Write your check-yourself answers in [notes/my-answers](notes/my-answers/README.md). Saying it in writing is the study. Reading is the setup.
+Every source file is commented for someone who is new to this.
 
-## Tonight
+---
 
-From `projects/RunbookCopilot`:
+## Run it
+
+Nothing below needs an API key or a network connection.
 
 ```powershell
+cd projects/RunbookCopilot
 dotnet test
 dotnet run --project src/RunbookCopilot -- eval
-dotnet run --project src/RunbookCopilot -- ask "Which region is paired with eastus for failover?"
-dotnet run --project src/RunbookCopilot -- agent --scripted "Is billing-api healthy and where is failover documented?"
-dotnet run --project src/RunbookCopilot -- extract "Create a trial tenant for Contoso in eastus, environment dev, ending on 2026-11-01"
 dotnet run --project src/RunbookCopilot -- trace ask "Which region is paired with eastus for failover?"
-dotnet run --project src/RunbookCopilot -- trace agent "Is billing-api healthy and where is failover documented?"
 ```
 
-`trace` sends nothing. It prints the HTTP request body the other commands would post. If one command makes the four words concrete, it is that one — read it with [notes/08-the-request-body.md](notes/08-the-request-body.md) open.
+`trace` sends nothing. It prints the JSON an LLM application would post. That one command is the fastest way to understand what all of this really is.
 
-Then the LangChain port, from `projects/langchain-port`:
+For generated answers, point it at a local [Ollama](https://ollama.com) or an Azure OpenAI endpoint — see the [project README](projects/RunbookCopilot/README.md).
 
-```powershell
-.\.venv\Scripts\python.exe ask.py --eval
-.\.venv\Scripts\python.exe ask.py "Which region is paired with eastus for failover?"
-```
+---
 
-And with the model running, the run that found the three mistakes in [notes/my-answers/lab-6-transcript.md](notes/my-answers/lab-6-transcript.md):
+## Three things this project found
 
-```powershell
-dotnet run --project src/RunbookCopilot -- agent "Is billing-api healthy and where is failover documented?"
-dotnet run --project src/RunbookCopilot -- extract "Create a tenant for Fabrikam in mars, environment prod"
-```
+Running it against a real model (`llama3.2`, local) produced failures worth more than the features:
 
-The second one is accepted, and it should not be. That is lab 7.
+1. **A validator accepted a fabricated value.** Asked to extract a tenant for region `mars` — not in the allowlist — the model silently returned `westeurope` instead, and validation passed, 4 runs out of 4. An allowlist catches malformed output, not confident invention.
+2. **The real model ignored the scripted plan.** It called two tools in one turn and never used the search tool the stand-in always used. The loop handled it correctly, but that path had never actually been exercised.
+3. **A grounded answer still overstated its source.** The runbook says *"do not fail over while a provision lock is held"*; the answer said *"a provision lock is in place."* A rule became a status claim that no tool had checked.
 
-Then read [notes/03-rag.md](notes/03-rag.md) and answer its questions in your own words. The labs in [projects/RunbookCopilot/LABS.md](projects/RunbookCopilot/LABS.md) are how this becomes experience you can claim.
+Written up in [notes/my-answers/lab-6-transcript.md](notes/my-answers/lab-6-transcript.md).
+
+---
+
+## A note on scope
+
+The company in the sample documents, Northwind Cloud, is invented. Nothing here comes from any employer's systems or documents.
+
+This is a study project, not production software. [notes/00-how-to-study.md](notes/00-how-to-study.md) sets out what it is honest to claim from it, and [the reference note](notes/reference/production-genai-systems.md) ends with a table of what this project does **not** do.
