@@ -3,6 +3,10 @@
 **Source:** ["Production GenAI Systems" — Google Doc](https://docs.google.com/document/d/12FBU-Ss2Ugo9YCyKXREy9_x5Pudxi8rE4FpuZ91R6Jk/mobilebasic) (no author stated).
 This note covers the same ideas in our own words and maps each one onto our code. See [the folder rule](README.md) for why it is not a copy.
 
+> **Diagrams.** The flowcharts below are written in Mermaid. They render automatically on GitHub.
+> In VS Code they need the free extension **"Markdown Preview Mermaid Support"** — until you install it you will see the code instead of the picture.
+> The original hand-drawn versions are saved on your machine at `notes/reference/private/genai-diagrams/`, which is gitignored and never uploaded.
+
 ---
 
 ## Why this note matters
@@ -27,15 +31,39 @@ Most people stop at the demo. The seven parts below are what the next six months
 
 You know this one. [Note 3](../03-rag.md) and [simple words, Part 3](../ai-in-simple-words.md) cover it.
 
-Two pipelines, and it helps to see them as separate:
+**Goal: give the model the right knowledge at the moment it answers.**
 
-```
-Ingestion (once, or when a document changes):
-    Documents -> Parse -> Chunk -> Embed -> Vector DB
+There are two pipelines, and it helps a lot to see them as separate things. One runs rarely. One runs on every question.
 
-Query time (every question):
-    Question -> Retrieve -> Rerank -> Context -> LLM -> Answer
+```mermaid
+flowchart TB
+    subgraph ING["INGESTION — runs once, or when a document changes"]
+        direction TB
+        D[Documents] --> P[Parsing]
+        P --> C[Chunking]
+        C --> E["Embeddings<br/>[0.1, 0.4, ...]"]
+        E --> V[(Vector database)]
+    end
+
+    subgraph QRY["QUERY TIME — runs on every question"]
+        direction TB
+        Q[User query] --> QE["Query embedding<br/>[0.2, 0.1, ...]"]
+        QE --> R["Retrieval (top K)"]
+        R --> RR[Reranking]
+        RR --> CTX[Relevant context]
+        CTX --> L[LLM]
+        L --> A[Answer]
+    end
+
+    V -. searched by .-> R
 ```
+
+**Key points**
+
+- Good retrieval = good context = good answer. The chain starts at retrieval.
+- The knobs are: chunk size, overlap, metadata, embeddings.
+- Hybrid search plus reranking improves quality.
+- Keep documents updated, or you serve stale context with full confidence.
 
 ### The six ideas, and where ours live
 
@@ -81,13 +109,18 @@ Compare that with everything we have done: we never changed any weights. We only
 
 ### RAG or fine-tuning?
 
-| | RAG | Fine-tuning |
+**Goal: teach the model how to behave — not what to know.**
+
+Use it for: a consistent output format, a specific style or tone, classification and extraction, or domain-specific behaviour.
+
+| Aspect | RAG | Fine-tuning |
 | --- | --- | --- |
-| What it changes | The **context** you send | The **model's behaviour** |
-| Updating knowledge | Easy — edit a document | Hard — retrain |
-| Private knowledge | Good | Expensive to maintain |
-| Writing style / tone | Limited | Strong |
-| Classification tasks | Possible | Often better |
+| What it changes | The **context** / knowledge | The **model's behaviour** |
+| Knowledge freshness | Easy — just update the documents | Hard — retrain |
+| Private / internal knowledge | Good | Expensive to maintain |
+| Style / format | Limited | Strong |
+| Classification | Possible | Often useful |
+| Cost (long term) | Lower | Higher |
 
 ### The rule
 
@@ -148,10 +181,12 @@ They are not rivals. Use code graders where you can, model graders where you mus
 
 Two different jobs, and you need both:
 
-```
-   Capability evals  ->  improve the system  ->  Regression evals  ->  protect what worked
-          ^                                                                  |
-          +------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    CAP["<b>Capability evals</b><br/>What can the system do?<br/>Use hard tasks.<br/><i>Goal: improve</i>"]
+    REG["<b>Regression evals</b><br/>Did something break?<br/>Should have a high pass rate.<br/><i>Goal: protect</i>"]
+    CAP -->|you improve the system| REG
+    REG -->|the new ability is now protected| CAP
 ```
 
 - **Capability** — "what can it do?" Use **hard** tasks, where there is room to improve. A low score here is useful information.
@@ -168,14 +203,16 @@ Run the same task **k** times:
 - **`pass@k`** — did it succeed **at least once** in k attempts?
 - **`pass^k`** — did it succeed **every single time** in k attempts?
 
-Suppose the model succeeds 80% of the time.
+Suppose the model succeeds **80%** of the time. Run it 5 times:
 
-| Measure | Meaning | Roughly |
-| --- | --- | --- |
-| `pass@5` | at least one of 5 works | ~100% |
-| `pass^5` | all 5 work | ~33% |
+| Measure | Meaning | Formula | Result |
+| --- | --- | --- | --- |
+| `pass@5` | at least one of 5 works | 1 − (0.2)⁵ | **99.68%** |
+| `pass^5` | all 5 work | (0.8)⁵ | **32.77%** |
 
-**Same model. Same task.** One number looks excellent, the other looks unusable.
+Work through why. `pass@5` fails only if **every** attempt fails: 0.2 × 0.2 × 0.2 × 0.2 × 0.2 = 0.0032, so success is 99.68%. `pass^5` needs **every** attempt to succeed: 0.8⁵ = 32.77%.
+
+**Same model. Same task. Same 80%.** One number looks excellent, the other looks unusable.
 
 > Solving a task **eventually** is not the same as solving it **reliably.**
 
@@ -204,11 +241,13 @@ And: **grade the outcome, not the exact steps.** If the model reaches the right 
 
 ### Evals in CI/CD
 
-```
-Prompt or code change -> Run eval suite -> Compare to baseline -> Regression?
-                                                                 /        \
-                                                              Yes          No
-                                                        Investigate     Deploy
+```mermaid
+flowchart LR
+    CH[Code or prompt change] --> RUN[Run eval suite]
+    RUN --> CMP[Compare with baseline]
+    CMP --> Q{Regression?}
+    Q -->|Yes| INV[Investigate — block the deploy]
+    Q -->|No| DEP[Deploy]
 ```
 
 This is why `eval` returns **exit code 2** when the score is not perfect, and why `Retrieval_eval_recalls_every_runbook` is a unit test. A pipeline can read that and block the deploy.
@@ -221,25 +260,32 @@ This is why `eval` returns **exit code 2** when the score is not perfect, and wh
 
 **Evals** tell you *whether* it worked. **Observability** tells you *why*.
 
-Trace one request through every stage:
+**Goal: make the system debuggable instead of mysterious.**
 
-```
-Request -> Query processing -> Embedding -> Retrieval -> Reranking -> LLM -> Response
-```
+Trace one request through every stage, and record something at each step:
 
-Record something at each step.
+```mermaid
+flowchart LR
+    REQ[Request] --> QP[Query<br/>processing]
+    QP --> EMB[Embedding]
+    EMB --> RET[Retrieval]
+    RET --> RR[Reranking]
+    RR --> LLM[LLM]
+    LLM --> RES[Response]
+```
 
 ### What to measure
 
 | Signal | What exactly |
 | --- | --- |
-| **Latency** | p50, p95, p99 — not the average. The average hides the slow 5%. |
+| **Performance** | latency p50, p95, p99 — **not the average**. The average hides the slow 5%. Also throughput. |
 | **Cost** | input tokens, output tokens, cost per request |
-| **Quality** | eval scores, user feedback, did the task complete |
-| **RAG** | which documents came back, their scores, how big the context was |
-| **Versions** | model version, prompt version, retrieval version |
+| **Quality** | eval score, user feedback, task success rate |
+| **RAG signals** | which documents came back, their similarity scores, how big the context was |
+| **Versions** | model version, prompt version, retrieval / index version |
+| **Errors** | exceptions, and every tool / API call with its result |
 
-That last row is the one people skip and then regret.
+The last two rows are the ones people skip and then regret.
 
 ### Why it matters
 
@@ -266,14 +312,15 @@ Log the question id, the file names retrieved, token counts and latency. Log the
 
 # Part 5 — Caching: faster and cheaper
 
-Model calls cost money and time. Caching avoids paying twice for the same work.
+**Goal: avoid repeating expensive work.** Model calls cost money and time.
 
-```
-CACHE
- ├── Embeddings    -> do not re-embed an unchanged document
- ├── Retrieval     -> reuse results for a repeated query
- └── Responses     -> reuse the answer
-      └── API results -> reuse external data while it is still fresh
+You can cache at four points along the pipeline, and each one saves a different cost:
+
+```mermaid
+flowchart LR
+    E["<b>Embedding</b><br/>cache"] --> R["<b>Retrieval</b><br/>cache"]
+    R --> L["<b>LLM response</b><br/>cache"]
+    L --> A["<b>API / tool result</b><br/>cache"]
 ```
 
 ### Five layers
@@ -292,9 +339,13 @@ Our project caches embeddings in the weakest possible way: it re-embeds everythi
 
 ### The hard part is invalidation
 
-The question is never "can I cache this?" It is:
+You are asking the wrong question if you ask *"can we cache this?"*
 
-> **When does this cached value become wrong?**
+| Not the question | The real question |
+| --- | --- |
+| "Can we cache this?" | **"When does it become invalid?"** |
+
+> **Freshness beats speed.** A fast wrong answer is worse than a slow right one.
 
 A stale cache serves last month's policy as today's answer. Worse, a cache scoped incorrectly serves **customer A's answer to customer B** — now it is a security incident, not a performance bug.
 
@@ -320,11 +371,17 @@ Five different problems, five different fixes, one identical signal. Treat feedb
 
 ### The loop
 
-```
-User feedback -> Failure analysis -> Root cause -> Fix -> NEW EVAL -> protected forever
+```mermaid
+flowchart LR
+    F[User feedback] --> I[Investigate]
+    I --> RC[Find root cause]
+    RC --> FIX[Fix]
+    FIX --> PR[Prevent regression]
+    PR --> NE[<b>Create new eval</b>]
+    NE --> F
 ```
 
-The step everyone skips is **NEW EVAL**.
+The step everyone skips is **create new eval**.
 
 If you fix a bug and do not add a test, you will ship it again. That is not an AI idea, it is just engineering — but it matters more here, because the failure is a sentence rather than a stack trace, and nobody will notice the regression.
 
@@ -336,10 +393,16 @@ Production feedback is especially good at finding problems you never would have 
 
 # Part 7 — Guardrails: keeping the system inside the lines
 
-Three layers:
+**Goal: control what the system is allowed to do. Protect users, data and the business.**
 
-```
-User -> INPUT GUARDRAILS -> LLM -> OUTPUT GUARDRAILS -> Application
+A guard on the way in, and a guard on the way out:
+
+```mermaid
+flowchart LR
+    U[User] --> IG["🛡 INPUT<br/>guardrails"]
+    IG --> L[LLM]
+    L --> OG["🛡 OUTPUT<br/>guardrails"]
+    OG --> APP[Application]
 ```
 
 ### Input guardrails
@@ -357,9 +420,9 @@ Checked before the model sees anything:
 Checked before the user sees anything:
 
 - **Schema validation** — is it the JSON shape we need? → `TenantRequestReader.Read`
-- **Safety checks**
-- **PII detection** — did the answer leak something?
-- **Policy validation** — does this break a business rule?
+- **PII / sensitive data check** — did the answer leak something?
+- **Content safety and policy** — does this break a rule we must enforce?
+- **Toxicity / harm detection**
 
 ### Business rules are not the model's job
 
@@ -367,15 +430,15 @@ This is the most important idea in Part 7, and it is the answer to what you foun
 
 > **The model proposes. Deterministic code decides.**
 
-Example from the source document:
-
+```mermaid
+flowchart LR
+    P["LLM <b>proposes</b> an action<br/>e.g. refund ₹50,000"] --> C{"Policy / risk check<br/><i>automated cap: ₹10,000</i>"}
+    C -->|within policy| X[Execute action]
+    C -->|over the cap| H[<b>Human approval</b>]
+    H --> X
 ```
-Model says:     "refund ₹50,000"
-Business rule:  automated refunds are capped at ₹10,000
-Result:         BLOCKED -> human approval required
-```
 
-The rule is not in the prompt. It is in code, where it cannot be argued with.
+The ₹10,000 cap is **not in the prompt**. It is in code, where it cannot be argued with, talked around, or forgotten on a retry.
 
 Compare with our `mars` finding: we asked for an illegal region, the model quietly returned a legal one, and `TenantRules.Validate` accepted it. Our guardrail checked the **shape** of the value but never compared it back to the **input**. That is the missing output guardrail, and it is lab 7.
 
@@ -383,43 +446,44 @@ Compare with our `mars` finding: we asked for an illegal region, the model quiet
 
 # How it all fits together
 
-```
-                USER
-                 |
-        INPUT GUARDRAILS
-                 |
-                LLM ----------> Application data
-                 |
-                RAG
-                 |
-         Relevant context
-                 |
-                LLM
-                 |
-        OUTPUT GUARDRAILS
-                 |
-                USER
-               /    \
-       FEEDBACK      OBSERVABILITY
-               \    /
-               EVALS
-                 |
-         FAILURE ANALYSIS
-               /    \
-            RAG      FINE-TUNING
-               \    /
-          BETTER SYSTEM
+```mermaid
+flowchart TB
+    U([USER]) --> IG["🛡 Input guardrails"]
+    IG --> L1[LLM]
+    L1 --> AD[(Application data)]
+    L1 --> RAG[RAG retrieval]
+    RAG --> CTX[Relevant context]
+    AD --> CTX
+    CTX --> L2[LLM]
+    L2 --> OG["🛡 Output guardrails"]
+    OG --> U2([USER])
+
+    U2 --> FB[Feedback]
+    U2 --> OBS[Observability]
+    FB --> EV[Evals]
+    OBS --> EV
+    EV --> FA[Failure analysis]
+    FA --> RAG2[Improve RAG]
+    FA --> FT[Fine-tuning]
+    RAG2 --> BS([BETTER SYSTEM])
+    FT --> BS
+    BS -.-> RAG
 ```
 
-Caching sits across every expensive box.
+Caching sits across every expensive box in that picture.
 
 ### The production loop
 
-```
-BUILD -> EVAL -> DEPLOY -> OBSERVE -> COLLECT FEEDBACK
-  ^                                          |
-  |                                          v
-IMPROVE <- CREATE NEW EVALS <- ANALYSE FAILURES
+```mermaid
+flowchart LR
+    B[BUILD] --> E[EVAL]
+    E --> D[DEPLOY]
+    D --> O[OBSERVE]
+    O --> C[COLLECT<br/>FEEDBACK]
+    C --> A[ANALYSE<br/>FAILURES]
+    A --> N[CREATE<br/>NEW EVALS]
+    N --> I[IMPROVE]
+    I --> B
 ```
 
 This cycle is the actual difference between a demo and a product. The model is **one component**. The engineering around it decides whether the system is reliable, measurable, safe and improving.
