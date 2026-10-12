@@ -1,0 +1,17 @@
+{
+  "billing-api": {
+    "status": "healthy",
+    "owner": "payments",
+    "note": "no active incident"
+  },
+  "catalog-api": {
+    "status": "degraded",
+    "owner": "catalog",
+    "note": "elevated latency in eastus"
+  },
+  "dns": {
+    "status": "healthy",
+    "owner": "edge",
+    "note": "no active incident"
+  }
+}

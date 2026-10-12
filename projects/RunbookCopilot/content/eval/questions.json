@@ -1,0 +1,34 @@
+[
+  {
+    "question": "How many days does a trial tenant last?",
+    "expectedSource": "trials.md"
+  },
+  {
+    "question": "Which region is paired with eastus for failover?",
+    "expectedSource": "failover.md"
+  },
+  {
+    "question": "Where does Northwind Cloud store application secrets?",
+    "expectedSource": "secrets.md"
+  },
+  {
+    "question": "What severity is a customer-wide outage?",
+    "expectedSource": "incidents.md"
+  },
+  {
+    "question": "What storage redundancy does a trial tenant get?",
+    "expectedSource": "trials.md"
+  },
+  {
+    "question": "What is the DNS TTL after a regional failover?",
+    "expectedSource": "failover.md"
+  },
+  {
+    "question": "How often must the catalog key be rotated?",
+    "expectedSource": "secrets.md"
+  },
+  {
+    "question": "Which regions can a new tenant be provisioned in?",
+    "expectedSource": "regions.md"
+  }
+]
