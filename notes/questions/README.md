@@ -9,6 +9,7 @@ These are **your** questions, from real confusion while reading the code. That m
 | # | Question | Short answer |
 | --- | --- | --- |
 | [001](001-why-post-not-get.md) | We get an answer back from the LLM. Why is it POST and not GET? | Because the answer does not exist yet. You are asking the server to create one. |
+| [002](002-what-can-i-claim.md) | Can I say in an interview that I built a RAG system? | Not after Day 1. And never connect it to your employer's product. The honest version of the story is stronger — read this one before any interview. |
 
 ## How to use this folder
 

@@ -2,6 +2,8 @@
 
 Speak from the files. If you cannot open the file and point, leave that sentence out.
 
+> **Read [question 002](questions/002-what-can-i-claim.md) before any interview.** It covers what you may and may not claim, why connecting this to your employer's product would backfire, and the honest framing of the AI-assistant question — which is stronger than it sounds.
+
 ## Two minutes
 
 "I built a small .NET console app called Runbook Copilot. It answers questions over a set of operations runbooks.

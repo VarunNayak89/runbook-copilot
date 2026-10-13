@@ -6,11 +6,21 @@ You already call HTTP APIs, validate input, and ship a CLI. An LLM application i
 
 An interviewer will ask you to open a file and explain a choice. They will ask what broke. They will ask what you measured. A folder you have not changed fails that conversation even if the tests are green.
 
-Three levels, and you stop at the one you have actually done:
+### First, the thing that is easy to forget
 
-1. After the four commands in the root README: you built a .NET app that chunks markdown, retrieves with hybrid search, scores recall@3, validates JSON, and runs a tool loop against a stand-in model.
-2. After labs 2 through 5: you changed the corpus, the chunk size, and the tools, and you can say what the score did.
-3. After lab 6: you sent a grounded prompt to a real model and compared the answer to the passages.
+This code was written **with an AI assistant**, in a chat session. You directed it and you asked the questions. You did not type it.
+
+That is fine, and it is normal engineering in 2026. But it is also **public in your own git history** — every commit carries `Co-Authored-By: Claude`. Anyone can see it in ten seconds. So "I wrote every line" is a sentence your own repository contradicts.
+
+Keep the honest framing: *"I built this with an AI assistant, and I can explain any part of it."* That sentence survives scrutiny. The other one does not.
+
+### Three levels, and you stop at the one you have actually done
+
+1. **Read and run.** You have run the commands and can explain what an LLM application sends, how retrieval works, and how it is scored. You are studying this, not claiming to have shipped it.
+2. **Changed and measured.** After labs 2, 3 and 4: you altered the corpus, the chunk size and the tools, and you can say what the score did and why. **This is where it starts being yours.**
+3. **Found and fixed.** After lab 6 and lab 7: you called a real model, found a real failure, and closed it. Now "I built this" is defensible.
+
+The line is not who typed the code. It is: **can you defend every decision, and did you change something and measure the result?**
 
 Say the level you are on. The stand-in model is a test double. Calling it an LLM is the kind of slip that ends the interview.
 
