@@ -50,18 +50,49 @@ Two things appear that `ask` does not have:
 
 **A `tools` array.** Every turn carries the same three function definitions: a name, a description, and a JSON schema for the arguments. That is all the model ever receives about your tools. It cannot call them. It can only emit a name and an arguments string, and your C# decides what to do with that. `ToolCatalog.InvokeAsync` is the thing that actually runs. This is why `get_runbook` rejecting `..` is the real control and the system prompt is not.
 
-**A growing `messages` array.** Count them: 2, then 4, then 6. After each tool call your code appends two messages:
+**A growing `messages` array.** Count them: 2, then 4, then 6.
 
-```json
-{ "role": "assistant", "content": "", "tool_calls": [ { "id": "call-status", "function": { "name": "get_service_status", "arguments": "{\"service\":\"billing-api\"}" } } ] },
-{ "role": "tool", "content": "billing-api: status=healthy; owner=payments; ...", "tool_call_id": "call-status" }
+Here is what is actually in each request:
+
+```
+Request 1 of 3, messages = 2        Request 2 of 3, messages = 4        Request 3 of 3, messages = 6
+  1  system                           1  system                           1  system
+  2  user                             2  user                             2  user
+                                      3  assistant   <- NEW               3  assistant
+                                      4  tool        <- NEW               4  tool
+                                                                          5  assistant   <- NEW
+                                                                          6  tool        <- NEW
 ```
 
-The `tool_call_id` on the second message is the `id` from the first. That pairing is the only reason the model knows which question the result answers. A test asserts it: `Agent_turns_append_a_tool_message_that_answers_a_tool_call`.
+Nothing is ever removed. Messages 1 and 2 are sent **three times**.
 
-Now the part worth internalizing. The server stores nothing. Every turn resends the system message, the user question, and every tool result so far. The "memory" of an agent is a list in your process that you keep re-uploading. That is why a long loop gets expensive and slow, and why `maxSteps` is in the constructor.
+**Why does it grow?** Because the server remembers nothing. No session, no history. The moment it answers, it has forgotten you. So if you want a conversation, you keep the whole thing yourself and resend all of it, every turn.
 
-So: an agent is a `while` loop around the same POST, where your code reads `tool_calls` off the response and appends the results before going round again. `AgentLoop.RunAsync` is 30 lines. There is no other secret.
+**Why two new messages each round, not one?** Because each round adds a question and its answer:
+
+| New message | Role | Who wrote it |
+| --- | --- | --- |
+| "Please run `get_service_status` for billing-api" | `assistant` | the **model** asked |
+| "billing-api: status=healthy; owner=payments" | `tool` | your **C# code** replied |
+
+That is why the count goes 2 → 4 → 6 and not 2 → 3 → 4.
+
+The two are linked by a shared string:
+
+```json
+{ "role": "assistant", "tool_calls": [ { "id": "call-status", "function": { "name": "get_service_status" } } ] },
+{ "role": "tool",      "tool_call_id": "call-status",  "content": "billing-api: status=healthy" }
+```
+
+Both say `call-status`. That is the **only** thing connecting the answer to the question — a correlation id, the same idea you already use with message queues. If the model asks for two functions at once, two results come back, and only the id tells them apart. A test asserts this: `Agent_turns_append_a_tool_message_that_answers_a_tool_call`.
+
+**So the memory of an agent is a `List<ChatMessage>` in your own process, which you re-upload in full on every turn.** That is why a long loop gets slow and expensive: on turn 10 you are paying for everything that happened in turns 1 to 9 as well.
+
+That cost is why `maxSteps` exists. But there is a sharper reason too. Look at how the loop normally ends: it stops when the model returns no tool calls. **The model decides when your loop terminates.** You would never let anything else outside your program control that, and a confused model really can keep asking for tools forever. `maxSteps` is your own guaranteed exit — the same instinct as a retry limit or `MaxAutomaticRedirections`.
+
+So: an agent is a `for` loop around the same POST, where your code reads `tool_calls` off the response and appends the results before going round again. `AgentLoop.RunAsync` is 30 lines. There is no other secret.
+
+Longer walkthrough, with a worked example: [question 003](questions/003-why-messages-grow.md).
 
 ## LangChain is a library that builds this body
 

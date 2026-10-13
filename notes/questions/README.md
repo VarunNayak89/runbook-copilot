@@ -10,6 +10,7 @@ These are **your** questions, from real confusion while reading the code. That m
 | --- | --- | --- |
 | [001](001-why-post-not-get.md) | We get an answer back from the LLM. Why is it POST and not GET? | Because the answer does not exist yet. You are asking the server to create one. |
 | [002](002-what-can-i-claim.md) | Can I say in an interview that I built a RAG system? | Not after Day 1. And never connect it to your employer's product. The honest version of the story is stronger — read this one before any interview. |
+| [003](003-why-messages-grow.md) | Why does the message count grow 2 → 4 → 6? And what is `maxSteps`? | The server forgets everything, so you resend the whole conversation every turn. Each round adds a pair: the model's request, then your answer. `maxSteps` exists because the *model* decides when your loop ends. |
 
 ## How to use this folder
 
