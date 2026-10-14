@@ -12,7 +12,8 @@ There are only **three kinds of thing** in this folder:
 
 | Kind | Where | What it is |
 | --- | --- | --- |
-| **Notes** | `notes/` | Explanations. You read these. |
+| **Notes** | `notes/` | Explanations of the ideas. You read these. |
+| **Engineering track** | `notes/code/` | The same days, for a programmer: algorithms by name, classes, methods, production alternatives. |
 | **Code** | `projects/` | Two working apps. You run these. |
 | **Your writing** | `notes/my-answers/` | Your own answers. You write these. |
 
@@ -32,6 +33,7 @@ AI-Learning/
 ├── notes/                   <- the explanations
 │   ├── ai-in-simple-words.md    <- READ FIRST. Easy English, 5 words explained.
 │   ├── 00 ... 08 .md            <- the deeper notes, one topic each
+│   ├── code/                    <- the ENGINEERING track, one file per day
 │   ├── reference/               <- material from outside, saved for offline reading
 │   ├── questions/               <- YOUR questions, answered. Grows over time.
 │   └── my-answers/              <- YOU write here. This is the real study.
@@ -67,6 +69,12 @@ Do **not** read these in number order. `START-HERE.md` gives the real order.
 | [reference/production-genai-systems.md](notes/reference/production-genai-systems.md) | The 7 parts of a real system: fine-tuning, evals, observability, caching, feedback, guardrails | Longest |
 
 The numbers `00` to `08` are just file names. They are not a schedule.
+
+### `notes/code/` — the engineering track
+
+One file per day, written for a programmer rather than a learner. Each answers: which algorithm is this by name, which classes and methods implement it, what are the data structures and the complexity, and what would I use in production instead.
+
+Index: [notes/code/README.md](notes/code/README.md)
 
 ### `notes/reference/` — material from outside
 
