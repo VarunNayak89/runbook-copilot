@@ -38,6 +38,29 @@ cd C:\Users\VarunNayak\Personal\AI-Learning\projects\RunbookCopilot
 
 Keep this window open. Every command below runs from this folder.
 
+### If you see this error
+
+```
+The provided file path does not exist: src/RunbookCopilot.
+```
+
+**You are in the wrong folder.** You are in `AI-Learning`, not in `AI-Learning\projects\RunbookCopilot`.
+
+Two ways to fix it:
+
+```powershell
+# Option A - go into the project folder, then run the short command
+cd projects\RunbookCopilot
+dotnet run --project src/RunbookCopilot -- eval
+
+# Option B - stay at the top and use the long path
+dotnet run --project projects/RunbookCopilot/src/RunbookCopilot -- eval
+```
+
+Both work. `--project` is just a path, and a path is relative to where you are standing.
+
+Check where you are with `pwd` at any time.
+
 ---
 
 # The 7 days
