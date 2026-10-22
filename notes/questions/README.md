@@ -14,6 +14,7 @@ These are **your** questions, from real confusion while reading the code. That m
 | [004](004-how-the-model-knows-the-functions.md) | How does the model know which functions exist? Does it get all of them? | Yes — all of them, every turn. Your code hands over the whole menu; the model picks a dish; your code is the kitchen. RAG sends no functions at all. |
 | [005](005-how-retrieval-actually-works.md) | How does `trace ask` actually find the right passage? Vector database or embeddings? | Fake offline embeddings, a `List<>` not a database, plus BM25 — fused by rank. Walks the real scores through all four files, and shows which half caused the distractor. |
 | [006](006-bm25-vs-vector-and-what-384-means.md) | Does BM25 also do embedding? What does 384 mean? | BM25 does **no** embedding — it stores a `Dictionary<string,int>` and breaks the question into words. Vector search embeds the whole question. 384 = dimensions, fixed by the model, and it must match between question and chunks. |
+| [007](007-what-is-eval.md) | What is `eval`? Who writes the expected answers? What is 8/8? | A unit test for search. A **human** typed the expected file names into `questions.json`; the 8 is just how many entries it has. Tells you search did not break. Blind to which *section* won, to junk riding along, and to security. |
 
 ## How to use this folder
 
