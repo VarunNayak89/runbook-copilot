@@ -232,6 +232,84 @@ There are only 8 questions. The score says nothing about any question that is no
 
 ---
 
+# Part 7 — Which of the two searches does eval use?
+
+**Both.** It uses the hybrid, which is exactly what `ask` uses.
+
+## The code path
+
+```
+eval  →  RetrievalEval(knowledge.Search)      // knowledge.Search is a HybridSearch
+      →  _search.SearchAsync(...)
+      →  vectorHits  = _vectors.Search(...)   // vector
+         lexicalHits = _lexical.Search(...)   // BM25
+         return Fuse(vectorHits, lexicalHits) // combined
+```
+
+That is the right design: **you test what you ship.** If eval used only BM25 it would be measuring something you never actually run.
+
+## But that creates a blind spot — and an experiment found it
+
+I scored each half **separately** against the same 8 questions:
+
+```
+                              BM25    VECTOR   HYBRID
+                              only     only    (eval)
+TOTAL                         8/8      8/8      8/8
+```
+
+**All three are perfect.**
+
+So the eval cannot justify the hybrid search at all. If BM25 alone scores 8/8, you could delete the vector half and the score would not move.
+
+That is not because hybrid is useless. It is because **the 8 questions are too easy**:
+
+| The question says | The document says |
+| --- | --- |
+| "Which region is **paired** with eastus for **failover**?" | "eastus is **paired** with westus for **failover**" |
+
+Same words. BM25 wins trivially, and the vector search never gets a chance to prove itself.
+
+> This is the **capability eval** gap exactly. A regression suite detects breakage. It cannot show you how good you could be.
+
+## Harder questions — same meaning, different words
+
+```
+                                                      BM25   VECTOR  HYBRID
+What is the failover partner for eastus?              PASS   PASS    PASS
+How long does a free evaluation account stay open?    PASS   FAIL    PASS
+How quickly do name servers refresh after a cutover?  PASS   PASS    PASS
+Where are credentials kept?                           FAIL   FAIL    FAIL
+Which locations may I deploy a new customer to?       PASS   FAIL    FAIL
+
+TOTAL                                                 4/5    2/5     3/5
+```
+
+### Hybrid is **worse** than BM25 alone
+
+Look at the last row. **BM25 passes. Hybrid fails.** The poor vector results pushed the correct answer out of the top 3.
+
+> The hashing embedder is not merely weak. On hard questions it **actively harms** the result, and RRF faithfully mixes that noise in.
+
+That follows from what it is: it counts words via a hash, so it cannot see that "locations" means "regions". With a real embedding model hybrid would likely beat both halves. With a fake one it is a net loss.
+
+**Honest caveat:** 5 questions is a tiny sample and I wrote them myself. This is **suggestive, not proven**. But it points clearly, and it matches the other evidence — the vector half is also what pulls `incidents.md` into the results.
+
+## The summary
+
+| Question | Answer |
+| --- | --- |
+| Which search does eval use? | **Hybrid** — both, fused |
+| Can eval tell you which half failed? | **No.** It only sees the combined result. |
+| Can eval tell you hybrid is worth it? | **No** — all three score 8/8 |
+| How do you find out? | Score the halves separately |
+
+### The sentence worth remembering
+
+> "My eval measures the hybrid search as a whole. When it fails, it cannot tell me which half caused it — I had to score BM25 and the vector separately to learn that my embedder was the problem."
+
+---
+
 # The honest sentence
 
 > "My recall@3 is 8 out of 8. That means the right **file** was in the top 3 for all 8 of my test questions.
@@ -249,6 +327,8 @@ There are only 8 questions. The score says nothing about any question that is no
 3. The search returns the wrong **section** of the right file. What does eval print?
 4. Your eval is 1.00 and the injection page is being retrieved. Why did the score not notice?
 5. Why can eval run on every commit when an answer-quality test cannot?
+6. Which of the two searches does eval measure? When a question fails, can it tell you which half was at fault?
+7. BM25 alone scores 8/8 and so does hybrid. What does that tell you about your question set, rather than about your search?
 
 ---
 
